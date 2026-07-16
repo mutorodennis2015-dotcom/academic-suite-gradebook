@@ -5,14 +5,14 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 
 WORKDIR /usr/src/app
 
-# Ensure the workdir is owned by pptruser
+# Set ownership to pptruser as root
 USER root
 RUN chown -R pptruser:pptruser /usr/src/app
 
 # Switch to the non-root user
 USER pptruser
 
-# Copy files and run install
+# Copy files and install dependencies
 COPY --chown=pptruser:pptruser package*.json ./
 RUN npm install
 
