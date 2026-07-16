@@ -26,10 +26,16 @@ app.post('/generate-pdf', async (req, res) => {
 
   let browser;
   try {
-    // Launch Puppeteer
+    // Launch Puppeteer with cloud-friendly settings
     browser = await puppeteer.launch({ 
-      headless: "new",
-      args: ['--no-sandbox', '--disable-setuid-sandbox'] 
+      headless: true,
+      executablePath: '/usr/bin/google-chrome-stable', 
+      args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu'
+      ] 
     });
     
     const page = await browser.newPage();
@@ -42,7 +48,7 @@ app.post('/generate-pdf', async (req, res) => {
 
     // Upload to R2
     await s3.send(new PutObjectCommand({
-      Bucket: 'academic-suite-gradebook', // Your bucket name
+      Bucket: 'academic-suite-gradebook',
       Key: `${fileName}.pdf`,
       Body: pdfBuffer,
       ContentType: 'application/pdf',
