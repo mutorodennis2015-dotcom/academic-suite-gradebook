@@ -5,16 +5,17 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 
 WORKDIR /usr/src/app
 
-# Copy files and immediately change ownership to the non-root user
-COPY --chown=pptruser:pptruser package*.json ./
+# Ensure the workdir is owned by pptruser
+USER root
+RUN chown -R pptruser:pptruser /usr/src/app
 
 # Switch to the non-root user
 USER pptruser
 
-# Run install as the user who now owns the files
+# Copy files and run install
+COPY --chown=pptruser:pptruser package*.json ./
 RUN npm install
 
-# Copy the rest of the application files with correct ownership
 COPY --chown=pptruser:pptruser . .
 
 CMD [ "node", "server.js" ]
