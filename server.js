@@ -1,35 +1,39 @@
 require('dotenv').config();
 const express = require('express');
-const puppeteer = require('puppeteer');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const cors = require('cors');
+const { S3Client } = require('@aws-sdk/client-s3');
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
-// Initialize S3
-const s3 = new S3Client({ /* ... your config ... */ });
-
-// Global browser variable to reuse across requests
-let browserInstance = null;
-
-app.post('/export', async (req, res) => {
-    try {
-        if (!browserInstance) {
-            browserInstance = await puppeteer.launch({ args: ['--no-sandbox'] });
-        }
-        
-        const page = await browserInstance.newPage();
-        await page.goto(req.body.url);
-        const pdf = await page.pdf();
-        
-        // ... Upload to S3 logic ...
-        
-        await page.close();
-        res.status(200).send("Export successful");
-    } catch (error) {
-        console.error(error);
-        res.status(500).send("Export failed");
-    }
+// Initialize S3 (ensure these env vars are set in Render)
+const s3 = new S3Client({
+  region: 'auto',
+  endpoint: 'https://9f2283c8f3239a2ad85599b57a4401c4.r2.cloudflarestorage.com',
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+  },
 });
 
-app.listen(process.env.PORT || 3000, () => console.log('Server running'));
+// Root route to fix "Cannot GET /"
+app.get('/', (req, res) => {
+  res.status(200).send('Academic Suite Gradebook Service is Running.');
+});
+
+// Example route for your future PDF export functionality
+app.post('/export', async (req, res) => {
+  try {
+    // Your export/puppeteer logic goes here
+    res.status(200).send("Export process initiated");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Export failed");
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
