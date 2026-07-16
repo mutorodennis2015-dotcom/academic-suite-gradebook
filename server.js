@@ -4,10 +4,10 @@ const cors = require('cors');
 const { S3Client } = require('@aws-sdk/client-s3');
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+app.use(cors()); // Allows your HTML to talk to this server
+app.use(express.json()); // Essential for receiving JSON data
 
-// Initialize S3 (ensure these env vars are set in Render)
+// Initialize S3 - Ensure these are added in Render's Environment tab
 const s3 = new S3Client({
   region: 'auto',
   endpoint: 'https://9f2283c8f3239a2ad85599b57a4401c4.r2.cloudflarestorage.com',
@@ -17,19 +17,23 @@ const s3 = new S3Client({
   },
 });
 
-// Root route to fix "Cannot GET /"
+// Root route to confirm the service is live
 app.get('/', (req, res) => {
   res.status(200).send('Academic Suite Gradebook Service is Running.');
 });
 
-// Example route for your future PDF export functionality
+// Endpoint to receive gradebook data and process export
 app.post('/export', async (req, res) => {
   try {
-    // Your export/puppeteer logic goes here
-    res.status(200).send("Export process initiated");
+    const gradebookData = req.body; 
+    console.log("Received data for PDF:", gradebookData);
+    
+    // Logic for PDF generation using Puppeteer goes here
+    
+    res.status(200).json({ message: "PDF export initiated successfully!" });
   } catch (error) {
     console.error(error);
-    res.status(500).send("Export failed");
+    res.status(500).json({ error: "Export failed" });
   }
 });
 
