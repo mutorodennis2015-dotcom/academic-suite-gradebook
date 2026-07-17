@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { S3Client } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const puppeteer = require('puppeteer');
 
 const app = express();
@@ -22,7 +22,7 @@ app.use(express.json({ limit: '10mb' }));
 // 3. S3/R2 Setup
 const s3 = new S3Client({
   region: 'auto',
-  endpoint: 'https://9f2283c8f3239a2ad85599b57a4401c4.r2.cloudflarestorage.com',
+  endpoint: `https://${process.env.ACCOUNT_ID}.r2.cloudflarestorage.com`,
   credentials: {
     accessKeyId: process.env.R2_ACCESS_KEY_ID,
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
@@ -33,6 +33,24 @@ app.get('/', (req, res) => {
   res.status(200).send('Academic Suite Gradebook Service is Running.');
 });
 
+// 4. Route: Save data to R2 Cloudflare Storage
+app.post('/save', async (req, res) => {
+  try {
+    const params = {
+      Bucket: 'academic-suite-gradebook', // Updated to your correct bucket name
+      Key: 'gradebook_data.json',
+      Body: JSON.stringify(req.body),
+      ContentType: 'application/json'
+    };
+    await s3.send(new PutObjectCommand(params));
+    res.status(200).json({ message: "Saved to cloud successfully!" });
+  } catch (error) {
+    console.error("SAVE ERROR:", error);
+    res.status(500).json({ error: "Failed to save to cloud" });
+  }
+});
+
+// 5. Route: Generate PDF Export
 app.post('/export', async (req, res) => {
   let browser;
   try {
