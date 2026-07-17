@@ -2,12 +2,13 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { S3Client } = require('@aws-sdk/client-s3');
+const puppeteer = require('puppeteer'); // This is the engine that makes the PDF
 
 const app = express();
-app.use(cors()); // Allows your HTML to talk to this server
-app.use(express.json()); // Essential for receiving JSON data
+app.use(cors());
+app.use(express.json());
 
-// Initialize S3 - Ensure these are added in Render's Environment tab
+// Initialize S3
 const s3 = new S3Client({
   region: 'auto',
   endpoint: 'https://9f2283c8f3239a2ad85599b57a4401c4.r2.cloudflarestorage.com',
@@ -17,20 +18,36 @@ const s3 = new S3Client({
   },
 });
 
-// Root route to confirm the service is live
 app.get('/', (req, res) => {
   res.status(200).send('Academic Suite Gradebook Service is Running.');
 });
 
-// Endpoint to receive gradebook data and process export
+// The updated export logic
 app.post('/export', async (req, res) => {
   try {
-    const gradebookData = req.body; 
-    console.log("Received data for PDF:", gradebookData);
+    const browser = await puppeteer.launch({
+      executablePath: '/usr/bin/google-chrome-stable',
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
     
-    // Logic for PDF generation using Puppeteer goes here
+    const page = await browser.newPage();
     
-    res.status(200).json({ message: "PDF export initiated successfully!" });
+    // We send your data to the PDF generator
+    await page.setContent(`<html><body><h1>Gradebook Data</h1><pre>${JSON.stringify(req.body, null, 2)}</pre></body></html>`, { 
+      waitUntil: 'networkidle0' 
+    });
+
+    const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
+    await browser.close();
+
+    // Send the file to your computer
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Length': pdfBuffer.length,
+      'Content-Disposition': 'attachment; filename="gradebook.pdf"'
+    });
+    
+    res.send(pdfBuffer);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Export failed" });
